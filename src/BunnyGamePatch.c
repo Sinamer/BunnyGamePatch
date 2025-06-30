@@ -2,34 +2,34 @@
 #include <windows.h>
 
 struct PatchInfo {
-    DWORD originalOffset;
-    DWORD returnOffset;
-    BYTE* codeBytes;
-    SIZE_T codeSize;
-    BYTE* jumpBytes;
-    SIZE_T jumpSize;
+	DWORD originalOffset;
+	DWORD returnOffset;
+	BYTE* codeBytes;
+	SIZE_T codeSize;
+	BYTE* jumpBytes;
+	SIZE_T jumpSize;
 };
 
 BOOL ApplyPatch(BYTE* baseAddress, struct PatchInfo* patch)
 {
-    // allocate new memory
-    LPVOID memBlock = VirtualAlloc(NULL, patch->codeSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-    if(!memBlock)
-        return FALSE;
-    
+	// allocate new memory
+	LPVOID memBlock = VirtualAlloc(NULL, patch->codeSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+	if(!memBlock)
+		return FALSE;
+	
 	// calculate return jump
-    *(DWORD*)(patch->codeBytes + patch->codeSize - 4) = (baseAddress + patch->returnOffset) - ((BYTE*)memBlock + patch->codeSize);
-    
+	*(DWORD*)(patch->codeBytes + patch->codeSize - 4) = (baseAddress + patch->returnOffset) - ((BYTE*)memBlock + patch->codeSize);
+	
 	// write patch code to new memory
 	memcpy(memBlock, patch->codeBytes, patch->codeSize);
-    
+	
 	// calculate jump to new memory
-    *(DWORD*)(patch->jumpBytes + 1) = (BYTE*)memBlock - (baseAddress + patch->originalOffset + 5);
-    
+	*(DWORD*)(patch->jumpBytes + 1) = (BYTE*)memBlock - (baseAddress + patch->originalOffset + 5);
+	
 	// write jump to new memory from the original code
 	DWORD oldProtect;
 	if(!VirtualProtect(baseAddress + patch->originalOffset, patch->jumpSize, PAGE_EXECUTE_READWRITE, &oldProtect)) {
-        VirtualFree(memBlock, 0, MEM_RELEASE);
+		VirtualFree(memBlock, 0, MEM_RELEASE);
 		return FALSE;
 	}
 	memcpy(baseAddress + patch->originalOffset, patch->jumpBytes, patch->jumpSize);
@@ -133,6 +133,6 @@ BOOL RunPatch()
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
 {
-    if(ul_reason_for_call == DLL_PROCESS_ATTACH) return RunPatch();
-    return TRUE;
+	if(ul_reason_for_call == DLL_PROCESS_ATTACH) return RunPatch();
+	return TRUE;
 }
